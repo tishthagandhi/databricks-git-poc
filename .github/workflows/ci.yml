@@ -67,7 +67,6 @@ jobs:
               if not source.strip():
                   continue
 
-              # Ignore notebook magic commands and shell commands.
               lines = source.splitlines()
               if any(line.lstrip().startswith(("%", "!")) for line in lines):
                   print(f"Skipping cell {index}: notebook-specific command")
@@ -84,7 +83,7 @@ jobs:
 
           print(f"Python syntax validation passed: {checked} cells checked")
           PY
-          
+
       - name: Validate standalone Python files
         run: |
           python - <<'PY'
@@ -108,3 +107,35 @@ jobs:
           print(f"Python syntax validation passed: {len(files)} files checked")
           PY
 
+  create_pr:
+    name: Create or reuse pull request
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/git-poc-practice'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create PR if one does not already exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_BRANCH: feature/git-poc-practice
+          BASE_BRANCH: main
+        run: |
+          existing_pr=$(gh pr list \
+            --repo "$GH_REPO" \
+            --head "$HEAD_BRANCH" \
+            --base "$BASE_BRANCH" \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [ -n "$existing_pr" ]; then
+            echo "PR #$existing_pr is already open. No duplicate created."
+          else
+            gh pr create \
+              --repo "$GH_REPO" \
+              --head "$HEAD_BRANCH" \
+              --base "$BASE_BRANCH" \
+              --title "Automated PR: Databricks POC" \
+              --body "Automatically created after successful POC validation."
+          fi
