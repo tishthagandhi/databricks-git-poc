@@ -32,13 +32,54 @@ jobs:
           python - <<'PY'
           import json
 
-          with open("01_git_connection_test.ipynb",
-                    encoding="utf-8") as f:
+          path = "01_git_connection_test.ipynb"
+
+          with open(path, encoding="utf-8") as f:
               notebook = json.load(f)
 
           assert "cells" in notebook, "Missing cells"
           assert notebook.get("nbformat", 0) >= 4, \
               "Invalid notebook format"
 
-          print("Notebook validation passed")
+          print("Notebook JSON validation passed")
+          PY
+
+      - name: Validate Python syntax in notebook
+        run: |
+          python - <<'PY'
+          import ast
+          import json
+
+          path = "01_git_connection_test.ipynb"
+
+          with open(path, encoding="utf-8") as f:
+              notebook = json.load(f)
+
+          checked = 0
+
+          for index, cell in enumerate(notebook["cells"]):
+              if cell.get("cell_type") != "code":
+                  continue
+
+              source = "".join(cell.get("source", []))
+
+              if not source.strip():
+                  continue
+
+              # Ignore notebook magic commands and shell commands.
+              lines = source.splitlines()
+              if any(line.lstrip().startswith(("%", "!")) for line in lines):
+                  print(f"Skipping cell {index}: notebook-specific command")
+                  continue
+
+              try:
+                  ast.parse(source)
+              except SyntaxError as error:
+                  raise SystemExit(
+                      f"Syntax error in cell {index}: {error}"
+                  )
+
+              checked += 1
+
+          print(f"Python syntax validation passed: {checked} cells checked")
           PY
