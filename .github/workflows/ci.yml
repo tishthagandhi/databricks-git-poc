@@ -83,3 +83,27 @@ jobs:
 
           print(f"Python syntax validation passed: {checked} cells checked")
           PY
+          
+      - name: Validate standalone Python files
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          files = list(Path(".").rglob("*.py"))
+          files = [
+              p for p in files
+              if ".git" not in p.parts
+          ]
+
+          for path in files:
+              try:
+                  ast.parse(path.read_text(encoding="utf-8"))
+              except SyntaxError as error:
+                  raise SystemExit(
+                      f"Syntax error in {path}: {error}"
+                  )
+
+          print(f"Python syntax validation passed: {len(files)} files checked")
+          PY
+
