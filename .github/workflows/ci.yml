@@ -1,0 +1,44 @@
+
+name: Databricks POC Pre-Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - feature/git-poc-practice
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate POC files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check notebook exists
+        run: |
+          test -f 01_git_connection_test.ipynb
+          echo "Notebook exists"
+
+      - name: Validate notebook JSON
+        run: |
+          python - <<'PY'
+          import json
+
+          with open("01_git_connection_test.ipynb",
+                    encoding="utf-8") as f:
+              notebook = json.load(f)
+
+          assert "cells" in notebook, "Missing cells"
+          assert notebook.get("nbformat", 0) >= 4, \
+              "Invalid notebook format"
+
+          print("Notebook validation passed")
+          PY
